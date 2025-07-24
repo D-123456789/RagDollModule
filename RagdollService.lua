@@ -1,4 +1,7 @@
--- Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
+--[[
+Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
+Copy the Code in here then paste it into a ModuleScript Named "RagdollService" into ReplicatedStorage.
+]]
 local RagDollService = {}
 -- Builds the collision for each given part due to BallSocketContrsaints not having built in Collision.
 function RagDollService:BuildCollision(PartToAttach: BasePart)
