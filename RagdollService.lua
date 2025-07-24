@@ -1,6 +1,7 @@
 --[[
 Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
 Copy the Code in here then paste it into a ModuleScript Named "RagdollService" into ReplicatedStorage.
+Updated 2: Made legs not as broken and added new function RagDollService:DebrisRagDoll()
 ]]
 local RagDollService = {}
 -- Builds the collision for each given part due to BallSocketContrsaints not having built in Collision.
@@ -18,12 +19,20 @@ function RagDollService:BuildCollision(PartToAttach: BasePart)
 		BuiltCollision.Size = Vector3.new(2,1,2)
 	elseif PartToAttach.Name == "Left Leg" then
 		BuiltCollision.Size = Vector3.new(1,1.5,1)
+		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	elseif PartToAttach.Name == "Right Leg" then
 		BuiltCollision.Size = Vector3.new(1,1.5,1)
+		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	elseif PartToAttach.Name == "Head" then
 		BuiltCollision.Size = Vector3.new(0.75,0.75,0.75)
 		local Specialmesh = Instance.new("SpecialMesh", BuiltCollision)
 		Specialmesh.MeshType = Enum.MeshType.Head
+	elseif PartToAttach.Name == "Right Arm" then
+		BuiltCollision.Size = Vector3.new(1,1.5,1)
+		BuiltCollision.Position -= Vector3.new(0,0.25,0)
+	elseif PartToAttach.Name == "Left Arm" then
+		BuiltCollision.Size = Vector3.new(1,1.5,1)
+		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	end
 end
 -- Switchs all Motor6Ds into BallSocketContrsaints
@@ -51,7 +60,11 @@ function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 				b.Name = v.Name
 				b.Attachment0 = A0
 				b.Attachment1 = A1
-				b.Parent = v.Part0
+				b.Parent = v.Part1
+				if b.Name == "Left Hip" or b.Name == "Right Hip" then
+					b.LimitsEnabled = true
+					b.TwistLimitsEnabled = true
+				end
 				v:Destroy()
 			end
 		end
@@ -60,7 +73,6 @@ end
 -- Switchs all BallSocketContrsaints into Motor6Ds
 function RagDollService:SwitchedRigsMotor6D(char: Model)
 	for _, v in ipairs(char:GetDescendants()) do
-		char.HumanoidRootPart:PivotTo(CFrame.new(char.HumanoidRootPart.Position + Vector3.new(0,0.05,0)))
 		if v:IsA("Humanoid") then
 			v.PlatformStand = false
 			v.RequiresNeck = true
@@ -94,5 +106,17 @@ function RagDollService:RemoveCollisionRagDoll(char: Model)
 			end
 		end
 	end
+end
+-- Acts as a custom Debris service function but instead of parts it does Ragdoll.
+function RagDollService:DebrisRagDoll(char: Model, Time: number)
+	RagDollService:BuildCollision(char["Right Arm"])
+	RagDollService:BuildCollision(char["Left Arm"])
+	RagDollService:BuildCollision(char["Left Leg"])
+	RagDollService:BuildCollision(char["Right Leg"])
+	RagDollService:BuildCollision(char.Head)
+	RagDollService:SwitchedRigsBallSocketContrsaint(char)
+	task.wait(Time)
+	RagDollService:RemoveCollisionRagDoll(char)
+	RagDollService:SwitchedRigsMotor6D(char)
 end
 return RagDollService
