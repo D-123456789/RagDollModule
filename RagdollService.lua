@@ -2,6 +2,7 @@
 Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
 Copy the Code in here then paste it into a ModuleScript Named "RagdollService" into ReplicatedStorage.
 Updated 2: Made legs not as broken and added new function RagDollService:DebrisRagDoll()
+Updated 3: Added 2 functions. EnableRagDoll and DisableRagDoll. Does what they say.
 ]]
 local RagDollService = {}
 -- Builds the collision for each given part due to BallSocketContrsaints not having built in Collision.
@@ -35,7 +36,7 @@ function RagDollService:BuildCollision(PartToAttach: BasePart)
 		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	end
 end
--- Switchs all Motor6Ds into BallSocketContrsaints
+-- Switchs all Motor6Ds into BallSocketContrsaints. (Removes all Motor6DS that Cant flop around into BallSockets that Can flop around.)
 function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 	for _, v in pairs(char:GetDescendants()) do
 		if v:IsA("Humanoid") then
@@ -70,7 +71,7 @@ function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 		end
 	end
 end
--- Switchs all BallSocketContrsaints into Motor6Ds
+-- Switchs all BallSocketContrsaints into Motor6Ds (Removes all BallSockets that Can flop but dont allow movementinto Motor6Ds that cant flop but allow movement.)
 function RagDollService:SwitchedRigsMotor6D(char: Model)
 	for _, v in ipairs(char:GetDescendants()) do
 		if v:IsA("Humanoid") then
@@ -89,6 +90,8 @@ function RagDollService:SwitchedRigsMotor6D(char: Model)
 			Motor6D.C1 = v.Attachment1.CFrame
 			Motor6D.Parent = part1  
 			v:Destroy()
+			v.Attachment0:Destroy()
+			v.Attachment1:Destroy()
 		end
 	end
 end
@@ -107,7 +110,7 @@ function RagDollService:RemoveCollisionRagDoll(char: Model)
 		end
 	end
 end
--- Acts as a custom Debris service function but instead of parts it does Ragdoll.
+-- Acts as a custom Debris service function but instead of parts it does Ragdoll and Uses "Time" for how long to wait until UnRagDolling.
 function RagDollService:DebrisRagDoll(char: Model, Time: number)
 	RagDollService:BuildCollision(char["Right Arm"])
 	RagDollService:BuildCollision(char["Left Arm"])
@@ -116,6 +119,20 @@ function RagDollService:DebrisRagDoll(char: Model, Time: number)
 	RagDollService:BuildCollision(char.Head)
 	RagDollService:SwitchedRigsBallSocketContrsaint(char)
 	task.wait(Time)
+	RagDollService:RemoveCollisionRagDoll(char)
+	RagDollService:SwitchedRigsMotor6D(char)
+end
+-- Does all the collision building and Switched for you instead of doing Writing the functions this Service provides.
+function RagDollService:EnableRagDoll(char: Model)
+	RagDollService:BuildCollision(char["Right Arm"])
+	RagDollService:BuildCollision(char["Left Arm"])
+	RagDollService:BuildCollision(char["Left Leg"])
+	RagDollService:BuildCollision(char["Right Leg"])
+	RagDollService:BuildCollision(char.Head)
+	RagDollService:SwitchedRigsBallSocketContrsaint(char)
+end
+-- Does all the disabling RagDoll for you instead of Writing out  the function this Service provides
+function RagDollService:DisableRagDoll(char: Model)
 	RagDollService:RemoveCollisionRagDoll(char)
 	RagDollService:SwitchedRigsMotor6D(char)
 end
