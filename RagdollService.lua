@@ -1,3 +1,8 @@
+-- This Module is the actual thing that makes the Ragdoll happen. Dont edit it unless you know what your doing.
+-- Motor6Ds are the things that hold your Characters limbs Together. Without them you would be a pile of parts on the ground
+-- BallSocketConstraints are the things that allows Parts to flop around. With them you can Ragdoll or flop around if you allow it.
+-- Humanoid is the thing the defines a Model of a character from a Actaual Character. Without it you wouldnt be a Character but just a model.
+-- Note that char is still a Model but has a Humanoid to make it a Character.
 --[[
 Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
 Copy the Code in here then paste it into a ModuleScript Named "RagdollService" into ReplicatedStorage.
@@ -7,6 +12,7 @@ Updated 3: Added 2 functions. EnableRagDoll and DisableRagDoll. Does what they s
 local RagDollService = {}
 -- Builds the collision for each given part due to BallSocketContrsaints not having built in Collision.
 function RagDollService:BuildCollision(PartToAttach: BasePart)
+	-- The block for collision
 	local BuiltCollision = Instance.new("Part", PartToAttach)
 	BuiltCollision.Size = Vector3.new(1,1,1)
 	BuiltCollision.Transparency = 1
@@ -16,6 +22,7 @@ function RagDollService:BuildCollision(PartToAttach: BasePart)
 	local WeldedCollision = Instance.new("WeldConstraint", BuiltCollision)
 	WeldedCollision.Part0 = PartToAttach
 	WeldedCollision.Part1 = BuiltCollision
+	-- Big check to make sure each Cillision parts matchs CLOSELY to the limbs size and rotation that i dont wanna clean up
 	if PartToAttach.Name == "Torso" then
 		BuiltCollision.Size = Vector3.new(2,1,2)
 	elseif PartToAttach.Name == "Left Leg" then
@@ -29,18 +36,25 @@ function RagDollService:BuildCollision(PartToAttach: BasePart)
 		local Specialmesh = Instance.new("SpecialMesh", BuiltCollision)
 		Specialmesh.MeshType = Enum.MeshType.Head
 	elseif PartToAttach.Name == "Right Arm" then
-		BuiltCollision.Size = Vector3.new(1,1.5,1)
+		BuiltCollision.Size = Vector3.new(0.75,1.5,0.75)
 		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	elseif PartToAttach.Name == "Left Arm" then
-		BuiltCollision.Size = Vector3.new(1,1.5,1)
+		BuiltCollision.Size = Vector3.new(0.75,1.5,0.75)
 		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	end
 end
 -- Switchs all Motor6Ds into BallSocketContrsaints. (Removes all Motor6DS that Cant flop around into BallSockets that Can flop around.)
 function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
+	-- Runs through a loop of all Parts inside the character for the Ragdoll
 	for _, v in pairs(char:GetDescendants()) do
+		local player = game.Players:GetPlayerFromCharacter(char)
+		if player then
+			player.RigMode.Value = "RagDolled"
+		end
+		-- Defines if the v Is the Humanoid
 		if v:IsA("Humanoid") then
 			for i = 1,5 do
+				-- Sets Ragdoll
 				v.PlatformStand = true
 				v.RequiresNeck = false
 				v.BreakJointsOnDeath = false
@@ -49,7 +63,9 @@ function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 				task.wait(0.5)
 			end
 		end
+		-- Defines if it is a Motor6D
 		if v:IsA("Motor6D") then
+			-- Check to make sure not to destroy the RootJoint
 			if v.Name ~= "RootJoint" then
 				local A0 = Instance.new("Attachment")
 				local A1 = Instance.new("Attachment")
@@ -57,14 +73,14 @@ function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 				A1.CFrame = v.C1
 				A0.Parent = v.Part0
 				A1.Parent = v.Part1
-				local b = Instance.new("BallSocketConstraint")
-				b.Name = v.Name
-				b.Attachment0 = A0
-				b.Attachment1 = A1
-				b.Parent = v.Part1
-				if b.Name == "Left Hip" or b.Name == "Right Hip" then
-					b.LimitsEnabled = true
-					b.TwistLimitsEnabled = true
+				local ballS = Instance.new("BallSocketConstraint")
+				ballS.Name = v.Name
+				ballS.Attachment0 = A0
+				ballS.Attachment1 = A1
+				ballS.Parent = v.Part1
+				if ballS.Name == "Left Hip" or ballS.Name == "Right Hip" then
+					ballS.LimitsEnabled = true
+					ballS.TwistLimitsEnabled = true
 				end
 				v:Destroy()
 			end
@@ -73,22 +89,28 @@ function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 end
 -- Switchs all BallSocketContrsaints into Motor6Ds (Removes all BallSockets that Can flop but dont allow movementinto Motor6Ds that cant flop but allow movement.)
 function RagDollService:SwitchedRigsMotor6D(char: Model)
+	-- Runs through the loop of the character for unRagdoll
 	for _, v in ipairs(char:GetDescendants()) do
+		-- Gets players Current Rig Mode (A String value that determines if theyre in Ragdoll or Not)
+		local player = game.Players:GetPlayerFromCharacter(char)
+		if player then
+			player.RigMode.Value = "Motor6D"
+		end
+		-- Defines v as a Humanoid for the unragdoll
 		if v:IsA("Humanoid") then
 			v.PlatformStand = false
 			v.RequiresNeck = true
 			v.AutoRotate = true
 		end
+		-- Defines if v as a BallSocketConstraint for unragdoll
 		if v:IsA("BallSocketConstraint") then
-			local part0 = v.Attachment0.Parent
-			local part1 = v.Attachment1.Parent
 			local Motor6D = Instance.new("Motor6D")
 			Motor6D.Name = v.Name
-			Motor6D.Part0 = part0
-			Motor6D.Part1 = part1
+			Motor6D.Part0 = v.Attachment0.Parent
+			Motor6D.Part1 = v.Attachment1.Parent
 			Motor6D.C0 = v.Attachment0.CFrame
 			Motor6D.C1 = v.Attachment1.CFrame
-			Motor6D.Parent = part1  
+			Motor6D.Parent = v.Attachment1.Parent  
 			v:Destroy()
 			v.Attachment0:Destroy()
 			v.Attachment1:Destroy()
@@ -97,21 +119,23 @@ function RagDollService:SwitchedRigsMotor6D(char: Model)
 end
 -- Removes all Collosion Parts for the character that was made for the Ragdoll
 function RagDollService:RemoveCollisionRagDoll(char: Model)
+	-- Runs through the loop and checks for each built collision part that was made before and destroys it to return to UnRagdoll
 	for i, v in ipairs(char:GetDescendants()) do
 		if v.Name == "BuiltCollison" then
 			v:Destroy()
 		end
 		if v.Name == "Head" then
 			for ii, vv in ipairs(v:GetDescendants()) do
-				if vv.Name == "Builded" then
+				if vv.Name == "BuiltCollison" then
 					vv:Destroy()
 				end
 			end
 		end
 	end
 end
--- Acts as a custom Debris service function but instead of parts it does Ragdoll and Uses "Time" for how long to wait until UnRagDolling.
+-- Acts as a custom Debris service function but instead of Turning on it does Ragdoll then Uses "Time" Variable for how long to wait until UnRagDolling.
 function RagDollService:DebrisRagDoll(char: Model, Time: number)
+	-- Simulates the Debris service with a time to wait until undoing Ragdoll
 	RagDollService:BuildCollision(char["Right Arm"])
 	RagDollService:BuildCollision(char["Left Arm"])
 	RagDollService:BuildCollision(char["Left Leg"])
@@ -124,6 +148,7 @@ function RagDollService:DebrisRagDoll(char: Model, Time: number)
 end
 -- Does all the collision building and Switched for you instead of doing Writing the functions this Service provides.
 function RagDollService:EnableRagDoll(char: Model)
+	-- Turns on Ragdoll
 	RagDollService:BuildCollision(char["Right Arm"])
 	RagDollService:BuildCollision(char["Left Arm"])
 	RagDollService:BuildCollision(char["Left Leg"])
@@ -133,6 +158,7 @@ function RagDollService:EnableRagDoll(char: Model)
 end
 -- Does all the disabling RagDoll for you instead of Writing out  the function this Service provides
 function RagDollService:DisableRagDoll(char: Model)
+	-- Turns off ragdoll
 	RagDollService:RemoveCollisionRagDoll(char)
 	RagDollService:SwitchedRigsMotor6D(char)
 end
