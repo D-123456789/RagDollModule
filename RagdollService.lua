@@ -3,13 +3,26 @@
 -- BallSocketConstraints are the things that allows Parts to flop around. With them you can Ragdoll or flop around if you allow it.
 -- Humanoid is the thing the defines a Model of a character from a Actaual Character. Without it you wouldnt be a Character but just a model.
 -- Note that char is still a Model but has a Humanoid to make it a Character.
+-- Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
 --[[
-Only works on R6. Recommended to use a StartCharacter or switch game RigType to R6 if possible.
 Copy the Code in here then paste it into a ModuleScript Named "RagdollService" into ReplicatedStorage.
 Updated 2: Made legs not as broken and added new function RagDollService:DebrisRagDoll()
-Updated 3: Added 2 functions. EnableRagDoll and DisableRagDoll. Does what they say.
+Updated 3: Added 2 functions. RagDollService:EnableRagDoll and RagDollService:DisableRagDoll. Does what they say.
+Update 4: Added 2 Force applying functions. (RagDollService:ForceApplyRagDollWait() and RagDollService:ForceApplyRagDoll())
 ]]
 local RagDollService = {}
+-- Use this if your using a custom rig. A function that allows the user to create custom hitboxs for Ragdolls incase the user is making a custom rig.
+function RagDollService:CustomBuildCollision(char: Model, PartToCopyFrom: BasePart, BuiltCollisionSize: BasePart)
+	local BuiltCollision = Instance.new("Part", PartToCopyFrom)
+	BuiltCollision.Size = BuiltCollisionSize
+	BuiltCollision.Transparency = 1
+	BuiltCollision.Position = PartToCopyFrom.Position
+	BuiltCollision.Rotation = PartToCopyFrom.Rotation
+	BuiltCollision.Name = "BuiltCollison"
+	local WeldedCollision = Instance.new("WeldConstraint", BuiltCollision)
+	WeldedCollision.Part0 = PartToCopyFrom
+	WeldedCollision.Part1 = BuiltCollision
+end
 -- Builds the collision for each given part due to BallSocketContrsaints not having built in Collision.
 function RagDollService:BuildCollision(PartToAttach: BasePart)
 	-- The block for collision
@@ -32,14 +45,14 @@ function RagDollService:BuildCollision(PartToAttach: BasePart)
 		BuiltCollision.Size = Vector3.new(1,1.5,1)
 		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	elseif PartToAttach.Name == "Head" then
-		BuiltCollision.Size = Vector3.new(0.75,0.75,0.75)
+		BuiltCollision.Size = Vector3.new(1,1,1)
 		local Specialmesh = Instance.new("SpecialMesh", BuiltCollision)
 		Specialmesh.MeshType = Enum.MeshType.Head
 	elseif PartToAttach.Name == "Right Arm" then
-		BuiltCollision.Size = Vector3.new(0.75,1.5,0.75)
+		BuiltCollision.Size = Vector3.new(0.5,1.5,0.5)
 		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	elseif PartToAttach.Name == "Left Arm" then
-		BuiltCollision.Size = Vector3.new(0.75,1.5,0.75)
+		BuiltCollision.Size = Vector3.new(0.5,1.5,0.5)
 		BuiltCollision.Position -= Vector3.new(0,0.25,0)
 	end
 end
@@ -81,6 +94,8 @@ function RagDollService:SwitchedRigsBallSocketContrsaint(char: Model)
 				if ballS.Name == "Left Hip" or ballS.Name == "Right Hip" then
 					ballS.LimitsEnabled = true
 					ballS.TwistLimitsEnabled = true
+				elseif ballS.Name == "Neck" then
+					ballS.LimitsEnabled = true
 				end
 				v:Destroy()
 			end
@@ -146,20 +161,52 @@ function RagDollService:DebrisRagDoll(char: Model, Time: number)
 	RagDollService:RemoveCollisionRagDoll(char)
 	RagDollService:SwitchedRigsMotor6D(char)
 end
--- Does all the collision building and Switched for you instead of doing Writing the functions this Service provides.
+-- Does all the collision building and Switched for you instead of doing Writing the functions this Service provides. Dont use if your using a custom rig
 function RagDollService:EnableRagDoll(char: Model)
 	-- Turns on Ragdoll
-	RagDollService:BuildCollision(char["Right Arm"])
-	RagDollService:BuildCollision(char["Left Arm"])
-	RagDollService:BuildCollision(char["Left Leg"])
-	RagDollService:BuildCollision(char["Right Leg"])
-	RagDollService:BuildCollision(char.Head)
-	RagDollService:SwitchedRigsBallSocketContrsaint(char)
+	if char then
+		RagDollService:BuildCollision(char["Right Arm"])
+		RagDollService:BuildCollision(char["Left Arm"])
+		RagDollService:BuildCollision(char["Left Leg"])
+		RagDollService:BuildCollision(char["Right Leg"])
+		RagDollService:BuildCollision(char.Head)
+		RagDollService:SwitchedRigsBallSocketContrsaint(char)
+	end
 end
--- Does all the disabling RagDoll for you instead of Writing out  the function this Service provides
+-- Does all the disabling RagDoll for you instead of Writing out  the function this Service provides. dont use if your using a custom rig
 function RagDollService:DisableRagDoll(char: Model)
 	-- Turns off ragdoll
 	RagDollService:RemoveCollisionRagDoll(char)
 	RagDollService:SwitchedRigsMotor6D(char)
+end
+-- Applies force to the HumanoidRootPart which causes the player to fling in the Direction of the Character using AssemblyLinearVelocity. Uses TimeUntilApply to wait how long to apply the force. TimeToWaitUntilUnRagdoll is how long until to UnRagdoll. 
+function RagDollService:ForceApplyRagDollWait(char: Model, Force: Vector3, TimeUntilApply: number, TimeToWaitUntilUnRagdoll: number)
+	-- The Provided time to wait.
+	task.wait(TimeUntilApply)
+	-- Enables RagDoll to ensure its BallSockets being pushed and NOT Motor6Ds.
+	RagDollService:EnableRagDoll(char)
+	-- Sets HRP (the Humanoids Root Part)
+	local HumanoidRootPart: BasePart = char.HumanoidRootPart
+	-- Simple calculation to make it apply in the direction of the character.
+	local ForceResult = (HumanoidRootPart.CFrame.LookVector * Force.Magnitude)
+	-- checks if the hrp is real and ForceResult is real
+	if HumanoidRootPart and ForceResult then
+		-- Applies Force
+		HumanoidRootPart.AssemblyLinearVelocity = ForceResult
+	end
+	-- The time to wait until ragdolling
+	task.delay(TimeToWaitUntilUnRagdoll, function()
+		RagDollService:DisableRagDoll(char)
+	end)
+end
+-- Apples force to the HumanoidRootPart which causes the player to fling in the Direction of the Vector3 using AssemblyLinearVelocity But doesnt wait to unRagDoll.
+function RagDollService:ForceApplyRagDoll(char: Model, Force: Vector3, TimeUntilApply: number)
+	task.wait(TimeUntilApply)
+	RagDollService:EnableRagDoll(char)
+	local HumanoidRootPart: BasePart = char.HumanoidRootPart
+	local ForceResult = (HumanoidRootPart.CFrame.LookVector * Force.Magnitude)
+	if HumanoidRootPart then
+		HumanoidRootPart.AssemblyLinearVelocity = ForceResult
+	end
 end
 return RagDollService
