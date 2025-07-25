@@ -161,7 +161,7 @@ function RagDollService:DebrisRagDoll(char: Model, Time: number)
 	RagDollService:RemoveCollisionRagDoll(char)
 	RagDollService:SwitchedRigsMotor6D(char)
 end
--- Does all the collision building and Switched for you instead of doing Writing the functions this Service provides. Dont use if your using a custom rig
+-- Does all the collision building and Switched for you instead of doing Writing the functions this Service provides. Dont use if your using a custom rig or R15
 function RagDollService:EnableRagDoll(char: Model)
 	-- Turns on Ragdoll
 	if char then
@@ -173,7 +173,7 @@ function RagDollService:EnableRagDoll(char: Model)
 		RagDollService:SwitchedRigsBallSocketContrsaint(char)
 	end
 end
--- Does all the disabling RagDoll for you instead of Writing out  the function this Service provides. dont use if your using a custom rig
+-- Does all the disabling RagDoll for you instead of Writing out  the function this Service provides. dont use if your using a custom rig or R15
 function RagDollService:DisableRagDoll(char: Model)
 	-- Turns off ragdoll
 	RagDollService:RemoveCollisionRagDoll(char)
@@ -205,7 +205,9 @@ function RagDollService:ForceApplyRagDoll(char: Model, Force: Vector3, TimeUntil
 	RagDollService:EnableRagDoll(char)
 	local HumanoidRootPart: BasePart = char.HumanoidRootPart
 	local ForceResult = (HumanoidRootPart.CFrame.LookVector * Force.Magnitude)
-	if HumanoidRootPart then
+	local Player = game.Players:GetPlayerFromCharacter(char)
+	local RigMode = Player.RigMode
+	if HumanoidRootPart and Player and RigMode.Value == "RagDolled" then
 		HumanoidRootPart.AssemblyLinearVelocity = ForceResult
 	end
 end
